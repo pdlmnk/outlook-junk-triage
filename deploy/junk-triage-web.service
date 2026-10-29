@@ -1,0 +1,15 @@
+# Copy to /etc/systemd/system/, replace YOUR_USER, then:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now junk-triage-web
+[Unit]
+Description=Outlook Junkmail Triage web UI
+After=network.target
+
+[Service]
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/junk-triage
+ExecStart=/home/YOUR_USER/junk-triage/venv/bin/uvicorn web:app --host 127.0.0.1 --port 8210
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

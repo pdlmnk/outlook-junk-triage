@@ -1,0 +1,5 @@
+fastapi>=0.110
+msal>=1.28
+pydantic>=2
+requests>=2.31
+uvicorn>=0.29

@@ -1,0 +1,14 @@
+# personal data - never commit
+token_cache.json
+rules.json
+correspondents.json
+state.json
+counters.json
+stats.json
+spoof_catches.json
+*.log
+*.bak*
+*.tmp
+
+venv/
+__pycache__/

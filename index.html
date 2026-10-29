@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Outlook Junkmail Triage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a0a;--bg2:#222222;--bg3:#2e2e2e;--bg4:#3c3c3c;
+  --text:#ffffff;--text2:#e8e0d6;--text3:#c8bca8;
+  --accent:#6ee0f5;--accent2:#50d4ee;
+  --green:#70ffd0;--red:#ff9090;--yellow:#ffe060;
+  --border:rgba(180,165,145,.18);--radius:12px;
+  --mono:'JetBrains Mono',monospace;--sans:'DM Sans',sans-serif;
+  --input-bg:rgba(255,250,240,.06);--input-border:rgba(180,165,145,.25);
+  --table-hover:rgba(92,200,224,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text2);font-family:var(--sans);min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:1.2rem 1rem 3rem}
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1.4rem}
+h1{font-size:1.45rem;font-weight:700;color:var(--text)}
+h1 span{color:var(--accent)}
+.hdr-right{display:flex;gap:.6rem;align-items:center}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.6rem}
+.stat-card{background:linear-gradient(180deg,#1d1d1d 0%,#141414 100%);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:1.05rem 1.15rem;position:relative;overflow:hidden}
+.stat-card::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--yellow));opacity:.7}
+.stat-label{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.35rem;font-weight:600}
+.stat-value{font-family:var(--mono);font-size:1.45rem;color:var(--text);font-weight:600}
+.stat-sub{font-size:.7rem;color:var(--text3);font-family:var(--mono);margin-top:.4rem;word-break:break-word}
+.card{background:linear-gradient(180deg,#1d1d1d 0%,#141414 100%);border:1px solid rgba(255,255,255,.10);border-radius:14px;overflow:hidden;margin-bottom:1.4rem}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;padding:.8rem 1.1rem .5rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);font-weight:600;font-size:.7rem}
+.junk-row{display:grid;grid-template-columns:78px minmax(160px,240px) 1fr auto;gap:.6rem;align-items:center;padding:.55rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.05);font-size:.82rem}
+.junk-row:hover{background:var(--table-hover)}
+.junk-row:last-child{border:none}
+.j-date{font-family:var(--mono);color:var(--text3);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em}
+.j-from{overflow:hidden}
+.j-name{color:var(--text2);font-size:.78rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.j-addr{font-family:var(--mono);color:#888;font-size:.66rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.j-subj{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spoof-badge{display:inline-block;color:var(--red);font-size:.6rem;border:1px solid rgba(255,144,144,.4);border-radius:4px;padding:0 .3rem;margin-left:.4rem;vertical-align:middle;cursor:help}
+.j-word{cursor:pointer;border-radius:3px;padding:0 1px}
+.j-word:hover{background:rgba(255,144,144,.18);color:var(--red)}
+.j-word.sel{background:rgba(255,144,144,.28);color:var(--red)}
+.kw-bar{position:fixed;bottom:1.2rem;left:50%;transform:translateX(-50%);display:none;gap:.6rem;align-items:center;flex-wrap:wrap;max-width:92vw;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:.6rem .8rem;box-shadow:0 6px 24px rgba(0,0,0,.5);z-index:5}
+.kw-bar.show{display:flex}
+.kw-chip{font-family:var(--mono);font-size:.74rem;color:var(--red);border:1px solid rgba(255,144,144,.4);border-radius:5px;padding:.15rem .4rem;display:inline-flex;gap:.3rem;align-items:center}
+.kw-chip button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.8rem;padding:0;line-height:1}
+.kw-chip button:hover{color:var(--red)}
+.j-actions{display:flex;gap:.25rem}
+.btn{font-family:var(--sans);font-size:.85rem;font-weight:600;padding:.55rem 1.1rem;border:none;border-radius:7px;cursor:pointer;transition:filter .15s,background .15s,color .15s}
+.btn-primary{background:var(--accent);color:var(--bg)}
+.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{background:none;color:var(--text3);padding:.3rem .5rem;font-size:.72rem;border:1px solid transparent}
+.btn-ghost:hover{color:var(--text)}
+.btn-ghost.good:hover{color:var(--green)}
+.btn-ghost.bad:hover{color:var(--red)}
+.lang-badge{display:inline-block;color:var(--text3);font-size:.6rem;border:1px solid var(--border);border-radius:4px;padding:0 .3rem;margin-right:.4rem;vertical-align:middle;cursor:help}
+.opt-row{display:flex;align-items:center;gap:.55rem;padding:.2rem 1.1rem .7rem;font-size:.8rem;color:var(--text2);cursor:pointer;width:fit-content}
+.opt-row input{accent-color:var(--accent);width:15px;height:15px;cursor:pointer;margin:0}
+.opt-row .opt-sub{font-family:var(--mono);font-size:.68rem;color:var(--text3)}
+.empty{padding:1.2rem 1.1rem;color:var(--text3);font-size:.82rem}
+.rule-add{display:flex;gap:.5rem;align-items:center;padding:.55rem 1.1rem .7rem;border-bottom:1px solid rgba(255,255,255,.06);flex-wrap:wrap}
+select.input{width:auto;cursor:pointer}
+.rule-row{display:grid;grid-template-columns:1fr 44px 26px;gap:.6rem;align-items:center;padding:.38rem 1.1rem .38rem 2.1rem;font-size:.78rem}
+.rule-row:hover{background:var(--table-hover)}
+details.rule-group{border-bottom:1px solid rgba(255,255,255,.05)}
+details.rule-group:last-child{border:none}
+details.rule-group summary{display:flex;gap:.6rem;align-items:center;padding:.5rem 1.1rem;cursor:pointer;list-style:none;font-size:.78rem;user-select:none}
+details.rule-group summary::-webkit-details-marker{display:none}
+details.rule-group summary::before{content:"▸";color:var(--text3);font-size:.7rem;width:.8rem}
+details.rule-group[open] summary::before{content:"▾"}
+details.rule-group summary:hover{background:var(--table-hover)}
+details#logCard summary{cursor:pointer;user-select:none;list-style:none;justify-content:flex-start;gap:.5rem}
+details#logCard summary::-webkit-details-marker{display:none}
+details#logCard summary::before{content:"▸";font-size:.7rem}
+details#logCard[open] summary::before{content:"▾"}
+details#logCard summary:hover{color:var(--text)}
+.g-count{font-family:var(--mono);font-size:.72rem;color:var(--text3)}
+.g-hits{margin-left:auto;font-family:var(--mono);font-size:.74rem;color:var(--text3)}
+.rule-tag{font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;border:1px solid var(--border);border-radius:4px;padding:.14rem .3rem;text-align:center;color:var(--text3)}
+.rule-tag.good{color:var(--green);border-color:rgba(112,255,208,.4)}
+.rule-tag.bad{color:var(--red);border-color:rgba(255,144,144,.4)}
+.rule-val{font-family:var(--mono);font-size:.74rem;word-break:break-all;color:var(--text2)}
+.rule-sub{font-family:var(--mono);font-size:.64rem;color:#888;margin-top:.1rem;word-break:break-word;cursor:help}
+.rule-hits{font-family:var(--mono);color:var(--text3);font-size:.74rem;text-align:right}
+.rule-x{background:none;border:none;color:var(--text3);cursor:pointer;font-size:.85rem;padding:0 .2rem}
+.rule-x:hover{color:var(--red)}
+.input{background:var(--bg);border:1px solid var(--input-border);color:var(--text);padding:.45rem .6rem;border-radius:6px;font-size:.8rem;font-family:var(--mono);outline:none;width:100%}
+.input:focus{border-color:var(--accent)}
+.log{font-family:var(--mono);font-size:.7rem;color:var(--text3);white-space:pre-wrap;word-break:break-all;padding:.8rem 1.1rem;max-height:300px;overflow-y:auto;background:#111}
+.toast{position:fixed;bottom:1.2rem;right:1.2rem;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:.6rem 1rem;border-radius:8px;font-size:.8rem;opacity:0;transition:opacity .25s;pointer-events:none;max-width:340px}
+.toast.show{opacity:1}
+.spin{display:inline-block;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.auth-bar{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;background:linear-gradient(180deg,#1d1d1d 0%,#141414 100%);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.82rem;color:var(--text2)}
+.auth-bar.warn{border-color:rgba(255,144,144,.45)}
+.auth-bar.wait{border-color:rgba(110,224,245,.45)}
+.auth-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+.auth-bar.warn .auth-dot{background:var(--red)}
+.auth-bar.wait .auth-dot{background:var(--accent)}
+.auth-user{font-family:var(--mono);font-size:.78rem;color:var(--text)}
+.auth-code{font-family:var(--mono);font-size:1.1rem;font-weight:600;color:var(--text);letter-spacing:.12em;background:var(--bg);border:1px solid var(--input-border);border-radius:6px;padding:.15rem .55rem}
+.auth-bar a{color:var(--accent)}
+.auth-sub{font-family:var(--mono);font-size:.68rem;color:var(--text3)}
+.auth-right{margin-left:auto;display:flex;gap:.3rem;align-items:center}
+@media(max-width:700px){.junk-row{grid-template-columns:1fr auto;grid-auto-rows:auto}.j-date,.j-from{grid-column:1}.j-subj{grid-column:1/-1}.rule-row{grid-template-columns:1fr 36px 24px;padding-left:1.6rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="auth-bar" id="authBar"><span class="auth-dot"></span><span class="auth-sub">checking Outlook connection…</span></div>
+  <header>
+    <h1>Outlook Junkmail <span>Triage</span></h1>
+    <div class="hdr-right">
+      <button class="btn btn-primary" id="runBtn" onclick="runNow()">Run triage now</button>
+    </div>
+  </header>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Junk deleted</div><div class="stat-value" id="stDeleted">—</div><div class="stat-sub" id="stDeletedSub"></div></div>
+    <div class="stat-card"><div class="stat-label">In junk now</div><div class="stat-value" id="stJunk">—</div><div class="stat-sub">48h grace window</div></div>
+    <div class="stat-card"><div class="stat-label">Last run</div><div class="stat-value" id="stLast">—</div><div class="stat-sub" id="stLastSub"></div></div>
+    <div class="stat-card"><div class="stat-label">Unsubscribed domains</div><div class="stat-value" id="stUnsub">—</div><div class="stat-sub">one-click, lifetime</div></div>
+    <div class="stat-card"><div class="stat-label">Active rules</div><div class="stat-value" id="stRules">—</div><div class="stat-sub">edit below</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span>Sitting in junk</span><span id="junkHint">rescue/delete = this email only · +allow sender = rule for address · +block domain = rule for domain · click a word = keyword, click first &amp; last word = phrase, confirm in bar · ⚠ spoof = name/domain mismatch → brand rule</span></div>
+    <div id="junkList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span>Rules</span><span>saved instantly · applied on every run</span></div>
+    <div class="rule-add">
+      <select class="input" id="ruleType" onchange="syncRuleInput()">
+        <option value="delete_subject_keywords">Delete by keyword</option>
+        <option value="delete_now">Delete sender/domain</option>
+        <option value="brand_domains">Protected brand</option>
+        <option value="rescue_subject_keywords">Rescue by keyword</option>
+        <option value="always_rescue">Always rescue sender</option>
+        <option value="never_rescue">Never rescue sender</option>
+      </select>
+      <input class="input" id="ruleValue" style="flex:1;min-width:220px">
+      <button class="btn btn-primary" onclick="addRule()">Add</button>
+    </div>
+    <label class="opt-row" title="subject in another language/alphabet (e.g. Portuguese Correios scams) → deleted on the next run, no 48h grace; rescue rules still win"><input type="checkbox" id="optNonEnglish" onchange="setNonEnglish(this.checked)"><span>Auto-delete junk with a non-English subject</span><span class="opt-sub" id="optNonEnglishSub"></span></label>
+    <div id="rulesList"></div>
+  </div>
+
+  <details class="card" id="logCard">
+    <summary class="card-head"><span>Recent activity</span></summary>
+    <div class="log" id="log"></div>
+  </details>
+</div>
+<div class="kw-bar" id="kwBar">
+  <span id="kwChips" style="display:inline-flex;gap:.35rem;flex-wrap:wrap"></span>
+  <button class="btn btn-primary" id="kwGo" onclick="confirmBlockWords()"></button>
+  <button class="btn btn-ghost" onclick="clearKwSel()">cancel</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const RULE_KEYS = ["always_rescue","delete_now","rescue_subject_keywords","delete_subject_keywords","never_rescue"];
+let RULES = {};
+let JUNK = [];
+let HITS = {};
+let CATCHES = {};
+
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove("show"), 2800);
+}
+async function api(path, opts, ok404){
+  const r = await fetch(path, opts);
+  if(ok404 && r.status === 404) return null;  // message already gone — fine
+  if(!r.ok){ toast("Error: " + (await r.text()).slice(0,160)); throw new Error(path); }
+  return r.json();
+}
+function esc(s){ const d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+
+function normText(s){
+  // mirror of norm_kw() in triage.py; keep the two in sync
+  return s.toLowerCase().replace(/[^\p{L}\p{N}$]+/gu," ").split(/\s+/).filter(Boolean).join(" ");
+}
+const WORDS = {};  // ctx -> normalized token per whitespace-split word
+function clickableWords(text, ctx){
+  const raw = text.split(/\s+/);
+  WORDS[ctx] = raw.map(normText);
+  const sel = SEL && SEL.ctx === ctx ? SEL.idx : null;
+  const a = sel ? Math.min(...sel) : -1, b = sel ? Math.max(...sel) : -1;
+  return raw.map((w,i)=>{
+    return WORDS[ctx][i].length >= 2
+      ? `<span class="j-word${(i>=a&&i<=b)?" sel":""}" title="click one word = keyword · click first & last word = phrase" onclick='toggleWord(${JSON.stringify(ctx)},${i})'>${esc(w)}</span>`
+      : esc(w);
+  }).join(" ");
+}
+function renderJunk(junk){
+  JUNK = junk;
+  document.getElementById("stJunk").textContent = junk.length;
+  const el = document.getElementById("junkList");
+  if(!junk.length){ el.innerHTML = '<div class="empty">Folder is empty — nothing pending.</div>'; renderKwBar(); return; }
+  el.innerHTML = junk.map(m=>{
+    const d = m.received ? m.received.slice(5,10).replace("-","/") : "?";
+    return `<div class="junk-row" id="row_${cssId(m.id)}">
+      <span class="j-date">${esc(d)}</span>
+      <span class="j-from">
+        <div class="j-name" title="sender display name (spoofable)">${m.name ? clickableWords(m.name, cssId(m.id)+":n") : "—"}${m.spoof ? `<span class="spoof-badge" title="${esc(m.spoof)} — auto-deleted on next run">⚠ spoof</span>` : ""}</div>
+        <div class="j-addr" title="${esc(m.from)}">${esc(m.from)}</div>
+      </span>
+      <span class="j-subj" title="${esc(m.subject)}">${m.foreign ? `<span class="lang-badge" title="non-English subject${SETTINGS.delete_non_english ? " — auto-deleted on next run" : " — auto-delete is off"}">non-English</span>` : ""}${clickableWords(m.subject, cssId(m.id)+":s")}</span>
+      <span class="j-actions">
+        <button class="btn btn-ghost good" title="move this one email to inbox (no rule)" onclick='act(${JSON.stringify(m.id)},"rescue",false,"")'>rescue</button>
+        <button class="btn btn-ghost good" title="rescue + always-rescue rule for ${esc(m.from)}" onclick='act(${JSON.stringify(m.id)},"rescue",true,${JSON.stringify(m.from)})'>+allow sender</button>
+        <button class="btn btn-ghost bad" title="delete this one email (no rule)" onclick='act(${JSON.stringify(m.id)},"delete",false,"")'>delete</button>
+        <button class="btn btn-ghost bad" title="delete + instant-delete rule for everything from ${esc(m.domain)}" onclick='act(${JSON.stringify(m.id)},"delete",true,${JSON.stringify(m.domain)})'>+block domain</button>
+        <button class="btn btn-ghost bad" title="display name is faking a brand the domain doesn't match — add brand rule + delete now" onclick='markSpoof(${JSON.stringify(m.id)},${JSON.stringify(m.name||"")},${JSON.stringify(m.domain)})'>⚠ spoof</button>
+      </span>
+    </div>`;
+  }).join("");
+  renderKwBar();
+}
+function cssId(s){ return s.replace(/[^a-zA-Z0-9]/g,"").slice(-16); }
+
+function actNote(m){ return m ? `${m.from} | ${m.subject}` : ""; }
+async function act(id, action, remember, sender){
+  await api("/api/message-action", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({id, action, remember, sender, note: actNote(JUNK.find(x=>x.id===id))})}, true);
+  JUNK = JUNK.filter(m => m.id !== id);
+  renderJunk(JUNK);
+  toast(action==="rescue" ? "Moved to inbox"+(remember?" + allow rule added":"")
+                          : "Deleted"+(remember?" + block rule added":""));
+  if(remember) refresh();
+}
+
+const TYPE_META = {
+  delete_subject_keywords: {label:"delete keyword", cls:"bad",  hint:"word or adjacent phrase — matches subject or sender name, deleted with no grace  ⏎"},
+  delete_now:              {label:"delete sender",  cls:"bad",  hint:"sender@x.com or x.com — deleted with no 48h grace  ⏎"},
+  brand_domains:           {label:"brand",          cls:"bad",  hint:"brand: legit-domain.com[, domain2] — name claims brand, domain doesn't match → delete  ⏎"},
+  rescue_subject_keywords: {label:"rescue keyword", cls:"good", hint:"word or adjacent phrase — matches subject or sender name, straight to inbox  ⏎"},
+  always_rescue:           {label:"always rescue",  cls:"good", hint:"sender@x.com or x.com — straight to inbox  ⏎"},
+  never_rescue:            {label:"never rescue",   cls:"",     hint:"sender@x.com or x.com — never auto-rescue even if you emailed them  ⏎"},
+};
+const GROUP_META = {
+  ...Object.fromEntries(Object.entries(TYPE_META).map(([k,m])=>[k,{label:m.label,cls:m.cls}])),
+  spoof_auto:    {label:"fake domain in sender name", cls:"bad", tip:"sender display name showed this domain but the mail came from elsewhere — automatic check; × on a row = never flag that domain again"},
+  spoof_ignored: {label:"fake domain · ignored", cls:"",  tip:"domains exempt from the fake-domain-in-sender-name check; × re-enables flagging"},
+};
+const OPEN = new Set(JSON.parse(localStorage.getItem("jm_open_groups")||"[]"));
+function renderRules(rules){
+  RULES = rules;
+  const rows = [];
+  for(const k of Object.keys(TYPE_META)){
+    if(k === "brand_domains"){
+      const brands = rules.brand_domains || {};
+      const ignored = rules.spoof_ignore || [];
+      const hits = HITS.brand_spoofs || {};
+      for(const b of Object.keys(brands).sort())
+        rows.push({key:k, val:b, disp:`${b} → ${brands[b].join(", ")}`, hits:hits[b]||0, caught:(CATCHES[b]||[])[0]});
+      for(const [b,n] of Object.entries(hits).filter(([b])=>!(b in brands) && !ignored.includes(b)).sort((x,y)=>y[1]-x[1]))
+        rows.push({key:k, val:b, disp:b, hits:n, auto:true, caught:(CATCHES[b]||[])[0]});
+      for(const d of [...ignored].sort())
+        rows.push({key:k, val:d, disp:d, ignored:true, caught:(CATCHES[d]||[])[0]});
+    } else {
+      for(const v of (rules[k]||[]))
+        rows.push({key:k, val:v, disp:v, hits:(HITS[k]||{})[v]||0});
+    }
+  }
+  document.getElementById("stRules").textContent = rows.filter(r=>!r.auto).length;
+  const el = document.getElementById("rulesList");
+  const groups = [];
+  for(const r of rows){
+    const g = r.auto ? "spoof_auto" : r.ignored ? "spoof_ignored" : r.key;
+    let gr = groups.find(x=>x.g===g);
+    if(!gr) groups.push(gr = {g, rows:[]});
+    gr.rows.push(r);
+  }
+  const rowHtml = r => {
+    const del = r.auto    ? `ignoreSpoof(${JSON.stringify(r.val)})`
+              : r.ignored ? `unignoreSpoof(${JSON.stringify(r.val)})`
+              : r.key==="brand_domains" ? `delBrand(${JSON.stringify(r.val)})`
+                                        : `delRule(${JSON.stringify(r.key)},${JSON.stringify(r.val)})`;
+    const delTip = r.auto ? "stop flagging this domain" : r.ignored ? "re-enable flagging" : "remove";
+    const c = r.caught;
+    const detail = c ? `<div class="rule-sub" title="${esc(c.why||"")}">caught: &ldquo;${esc(c.subject||"")}&rdquo; · from ${esc(c.from||"?")} · ${esc((c.when||"").slice(0,10))}</div>` : "";
+    return `<div class="rule-row">
+      <span class="rule-val">${esc(r.disp)}${detail}</span>
+      <span class="rule-hits" title="times this rule fired">${r.hits||""}</span>
+      <button class="rule-x" title="${delTip}" onclick='${del}'>×</button>
+    </div>`;
+  };
+  el.innerHTML = groups.map(gr=>{
+    const g = GROUP_META[gr.g];
+    const hits = gr.rows.reduce((s,r)=>s+(r.hits||0),0);
+    return `<details class="rule-group" data-g="${gr.g}"${OPEN.has(gr.g)?" open":""}>
+      <summary ${g.tip?`title="${g.tip}"`:""}><span class="rule-tag ${g.cls}">${g.label}</span><span class="g-count">${gr.rows.length}</span><span class="g-hits" title="total hits">${hits||""}</span></summary>
+      ${gr.rows.map(rowHtml).join("")}
+    </details>`;
+  }).join("") || '<div class="empty">No rules yet — add one above, or use the buttons on a junk row.</div>';
+  el.querySelectorAll("details.rule-group").forEach(d=>d.addEventListener("toggle", ()=>{
+    if(d.open) OPEN.add(d.dataset.g); else OPEN.delete(d.dataset.g);
+    localStorage.setItem("jm_open_groups", JSON.stringify([...OPEN]));
+  }));
+}
+function syncRuleInput(){
+  document.getElementById("ruleValue").placeholder = TYPE_META[document.getElementById("ruleType").value].hint;
+}
+async function addRule(){
+  const t = document.getElementById("ruleType").value;
+  const inp = document.getElementById("ruleValue");
+  const raw = inp.value.trim();
+  if(!raw) return;
+  if(t === "brand_domains"){
+    const p = parseBrandRule(raw);
+    if(!p){ toast("Format: brand: domain.com[, domain2]"); return; }
+    RULES.brand_domains = RULES.brand_domains || {};
+    RULES.brand_domains[p.brand] = p.doms;
+    inp.value = "";
+    OPEN.add("brand_domains");
+    await saveRules();
+    refresh();
+    return;
+  }
+  const v = t.endsWith("_keywords") ? normText(raw) : raw.toLowerCase();
+  RULES[t] = RULES[t] || [];
+  if(!RULES[t].includes(v)) RULES[t].push(v);
+  inp.value = "";
+  OPEN.add(t);
+  await saveRules();
+  // apply to what's sitting in junk right now, same as click-to-block
+  const hits = ruleHits(t, v);
+  if(hits.length){
+    const action = t.startsWith("delete") ? "delete" : "rescue";
+    for(const m of hits){
+      await api("/api/message-action", {method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({id: m.id, action, remember: false, sender: "", note: actNote(m),
+                              rule_key: t, rule_value: v})}, true);
+    }
+    toast(`Rule added — ${action}d ${hits.length} matching now`);
+    refresh();
+  }
+}
+document.getElementById("ruleValue").addEventListener("keydown", e=>{ if(e.key==="Enter") addRule(); });
+syncRuleInput();
+async function saveRules(){
+  const clean = await api("/api/rules", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(RULES)});
+  renderRules(clean); toast("Rules saved");
+}
+function delRule(key, val){ RULES[key] = RULES[key].filter(x=>x!==val); saveRules(); }
+
+function delBrand(b){ delete RULES.brand_domains[b]; saveRules(); }
+
+function ignoreSpoof(d){
+  RULES.spoof_ignore = RULES.spoof_ignore || [];
+  if(!RULES.spoof_ignore.includes(d)) RULES.spoof_ignore.push(d);
+  OPEN.add("spoof_ignored");
+  saveRules();
+}
+function unignoreSpoof(d){
+  RULES.spoof_ignore = (RULES.spoof_ignore||[]).filter(x=>x!==d);
+  saveRules();
+}
+
+function parseBrandRule(v){
+  const i = v.indexOf(":");
+  if(i < 1) return null;
+  const brand = v.slice(0,i).trim().toLowerCase();
+  const doms = v.slice(i+1).split(/[\s,]+/).filter(Boolean).map(s=>s.toLowerCase());
+  return (brand && doms.length) ? {brand, doms} : null;
+}
+async function markSpoof(id, name, domain){
+  const guess = (name||"").toLowerCase().replace(/[^\p{L}\p{N} ]/gu," ").trim().split(/\s+/)[0] || domain.split(".")[0];
+  const v = prompt(`"${name}" from ${domain} looks faked.\nProtect which brand? Format: brand: legit-domain.com\nDeletes this email (and matching junk) now; future fakes die on every run.`,
+                   `${guess}: ${guess}.com`);
+  if(v === null) return;
+  const p = parseBrandRule(v);
+  if(!p){ toast("Format: brand: domain.com"); return; }
+  RULES.brand_domains = RULES.brand_domains || {};
+  RULES.brand_domains[p.brand] = p.doms;
+  await saveRules();
+  const rx = new RegExp("(^|[^a-z0-9])"+p.brand.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"($|[^a-z0-9])");
+  const legit = d => p.doms.some(x=>d===x||d.endsWith("."+x));
+  const hits = JUNK.filter(m => m.id===id || (rx.test((m.name||"").toLowerCase()) && !legit(m.domain)));
+  for(const m of hits){
+    await api("/api/message-action", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({id: m.id, action: "delete", remember: false, sender: "", note: actNote(m),
+                            rule_key: "brand_spoofs", rule_value: p.brand})}, true);
+  }
+  toast(`Spoof rule "${p.brand}" — deleted ${hits.length} now; future fakes auto-delete`);
+  refresh();
+}
+
+let SEL = null;  // {ctx, idx:Set} — one contiguous phrase within one subject/name
+function toggleWord(ctx, i){
+  if(!SEL || SEL.ctx !== ctx) SEL = {ctx, idx: new Set()};
+  if(SEL.idx.has(i)) SEL.idx.delete(i); else SEL.idx.add(i);
+  if(!SEL.idx.size) SEL = null;
+  renderJunk(JUNK);
+}
+function clearKwSel(){ SEL = null; renderJunk(JUNK); }
+function selPhrase(){
+  if(!SEL) return "";
+  const a = Math.min(...SEL.idx), b = Math.max(...SEL.idx);
+  return WORDS[SEL.ctx].slice(a, b+1).filter(Boolean).join(" ");
+}
+function renderKwBar(){
+  const bar = document.getElementById("kwBar");
+  const p = selPhrase();
+  if(!p){ bar.classList.remove("show"); return; }
+  const n = ruleHits("delete_subject_keywords", p).length;
+  const multi = p.includes(" ");
+  document.getElementById("kwChips").innerHTML =
+    `<span class="kw-chip">${esc(p)}<button title="clear selection" onclick='clearKwSel()'>×</button></span>`;
+  document.getElementById("kwGo").textContent =
+    `Block ${multi ? "phrase" : "keyword"} · delete ${n} now`;
+  bar.classList.add("show");
+}
+async function confirmBlockWords(){
+  const p = selPhrase();
+  if(!p) return;
+  RULES.delete_subject_keywords = RULES.delete_subject_keywords || [];
+  if(!RULES.delete_subject_keywords.includes(p)) RULES.delete_subject_keywords.push(p);
+  await saveRules();
+  const hits = ruleHits("delete_subject_keywords", p);
+  for(const m of hits){
+    await api("/api/message-action", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({id: m.id, action: "delete", remember: false, sender: "", note: actNote(m),
+                            rule_key: "delete_subject_keywords", rule_value: p})}, true);
+  }
+  SEL = null;
+  toast(`Blocked "${p}" — deleted ${hits.length} matching now; future matches die on sight`);
+  refresh();
+}
+function kwText(m){ return normText(m.subject + " " + (m.name||"")); }
+function ruleHits(key, v){
+  if(key==="delete_subject_keywords"||key==="rescue_subject_keywords")
+    return JUNK.filter(m=>kwText(m).includes(normText(v)));
+  if(key==="delete_now"||key==="always_rescue") return JUNK.filter(m=>m.from===v||m.domain===v);
+  return [];
+}
+async function runNow(){
+  const b = document.getElementById("runBtn");
+  b.disabled = true; b.innerHTML = '<span class="spin">◌</span> Running…';
+  try{
+    const r = await api("/api/run", {method:"POST"});
+    toast(r.summary.replace(/^.*SUMMARY\s*/,""));
+  } finally {
+    b.disabled = false; b.textContent = "Run triage now";
+    refresh();
+  }
+}
+
+let SETTINGS = {};
+async function setNonEnglish(on){
+  await api("/api/settings", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({delete_non_english: on})}, true);
+  SETTINGS.delete_non_english = on;
+  renderJunk(JUNK);
+  toast(on ? "Non-English junk will be deleted on every run" : "Non-English auto-delete off");
+}
+// ---- Outlook sign-in bar (device code: show code, user enters it at microsoft.com/link) ----
+let AUTH = {}, authPoll = null;
+function renderAuth(){
+  const bar = document.getElementById("authBar");
+  const p = AUTH.pending;
+  if(p){
+    const left = Math.max(0, Math.round(p.expires_at - Date.now()/1000));
+    bar.className = "auth-bar wait";
+    bar.innerHTML = `<span class="auth-dot"></span><span>Go to <a href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.url.replace(/^https?:\/\/(www\.)?/,""))}</a> and enter</span>
+      <span class="auth-code">${esc(p.code)}</span><button class="btn-ghost btn" onclick="navigator.clipboard.writeText('${esc(p.code)}').then(()=>toast('Code copied'))">copy</button>
+      <span class="auth-sub"><span class="spin">◌</span> waiting for Microsoft · expires in ${Math.floor(left/60)}:${String(left%60).padStart(2,"0")}</span>`;
+  } else if(AUTH.ok){
+    bar.className = "auth-bar";
+    bar.innerHTML = `<span class="auth-dot"></span><span>Connected to Outlook as</span><span class="auth-user">${esc(AUTH.user)}</span>
+      <span class="auth-right"><button class="btn-ghost btn" onclick="authStart()">Switch account</button>
+      <button class="btn-ghost btn bad" onclick="authSignOut()">Sign out</button></span>`;
+  } else {
+    bar.className = "auth-bar warn";
+    const why = AUTH.user ? `Sign-in for ${esc(AUTH.user)} expired` : "Not connected to Outlook";
+    bar.innerHTML = `<span class="auth-dot"></span><span>${why}</span>
+      ${AUTH.error ? `<span class="auth-sub">${esc(AUTH.error.slice(0,140))}</span>` : ""}
+      <span class="auth-right"><button class="btn btn-primary" onclick="authStart()">Sign in with Microsoft</button></span>`;
+  }
+}
+async function loadAuth(){
+  const wasPending = !!AUTH.pending;
+  AUTH = await api("/api/auth");
+  renderAuth();
+  if(AUTH.pending && !authPoll) authPoll = setInterval(loadAuth, 3000);
+  if(!AUTH.pending && authPoll){ clearInterval(authPoll); authPoll = null; }
+  if(wasPending && !AUTH.pending){
+    if(AUTH.ok){ toast("Connected as " + AUTH.user); refresh(); }
+    else if(AUTH.error) toast("Sign-in failed: " + AUTH.error.slice(0,120));
+  }
+  return AUTH;
+}
+async function authStart(){
+  await api("/api/auth/start", {method:"POST"});
+  await loadAuth();
+}
+async function authSignOut(){
+  if(!confirm("Sign out of Outlook?\n\nThe nightly triage stops until someone signs in again.")) return;
+  await api("/api/auth/signout", {method:"POST"});
+  await loadAuth();
+  refresh();
+}
+async function refresh(){
+  if(!(await loadAuth()).ok){
+    document.getElementById("junkList").innerHTML = '<div class="empty">Sign in above to see your junk folder.</div>';
+    document.getElementById("stJunk").textContent = "—";
+    return;
+  }
+  const s = await api("/api/state");
+  SETTINGS = s.settings || {};
+  document.getElementById("optNonEnglish").checked = !!SETTINGS.delete_non_english;
+  const neHits = ((s.rule_hits||{}).non_english||{}).subject || 0;
+  document.getElementById("optNonEnglishSub").textContent = neHits ? neHits + " deleted" : "";
+  HITS = s.rule_hits || {};
+  CATCHES = s.spoof_catches || {};
+  renderJunk(s.junk);
+  renderRules(s.rules);
+  const del = (s.stats||{}).deleted || {};
+  document.getElementById("stDeleted").textContent = Object.values(del).reduce((a,b)=>a+b,0).toLocaleString();
+  document.getElementById("stDeletedSub").textContent = (s.stats && s.stats.since ? "since " + new Date(s.stats.since+"T12:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}) + " · " : "")
+    + ["spoof","rule","expired","manual"].filter(k=>del[k]).map(k=>del[k]+" "+k).join(" · ");
+  document.getElementById("stUnsub").textContent = (s.unsubbed_domains||[]).length;
+  const m = s.last_summary.match(/^(\S+ \S+)/);
+  document.getElementById("stLast").textContent = m ? m[1].slice(5,16) : "never";
+  document.getElementById("stLastSub").textContent = s.last_summary.replace(/^.*SUMMARY\s*/,"");
+  const lg = document.getElementById("log");
+  lg.textContent = s.log_tail || "(no log yet)";
+  lg.scrollTop = lg.scrollHeight;
+}
+const logCard = document.getElementById("logCard");
+logCard.open = localStorage.getItem("jm_log_open") === "1";
+logCard.addEventListener("toggle", ()=>localStorage.setItem("jm_log_open", logCard.open ? "1" : "0"));
+refresh();
+setInterval(refresh, 120000);
+</script>
+</body>
+</html>

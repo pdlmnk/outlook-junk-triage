@@ -1,0 +1,167 @@
+{
+ "always_rescue": [],
+ "never_rescue": [],
+ "delete_now": [],
+ "rescue_subject_keywords": [],
+ "delete_subject_keywords": [],
+ "brand_domains": {
+  "aarp": [
+   "aarp.org"
+  ],
+  "ace hardware": [
+   "acehardware.com"
+  ],
+  "amazon": [
+   "amazon.com"
+  ],
+  "apple": [
+   "apple.com"
+  ],
+  "at&t": [
+   "att.com"
+  ],
+  "bank of america": [
+   "bankofamerica.com"
+  ],
+  "best buy": [
+   "bestbuy.com"
+  ],
+  "chase": [
+   "chase.com",
+   "jpmorgan.com"
+  ],
+  "citibank": [
+   "citi.com",
+   "citibank.com"
+  ],
+  "coinbase": [
+   "coinbase.com"
+  ],
+  "costco": [
+   "costco.com"
+  ],
+  "cvs": [
+   "cvs.com",
+   "cvshealth.com"
+  ],
+  "dhl": [
+   "dhl.com",
+   "dhl.de"
+  ],
+  "disney": [
+   "disney.com",
+   "disneyplus.com"
+  ],
+  "docusign": [
+   "docusign.com",
+   "docusign.net"
+  ],
+  "fedex": [
+   "fedex.com"
+  ],
+  "fidelity": [
+   "fidelity.com"
+  ],
+  "geek squad": [
+   "bestbuy.com"
+  ],
+  "home depot": [
+   "homedepot.com"
+  ],
+  "intuit": [
+   "intuit.com"
+  ],
+  "irs": [
+   "irs.gov"
+  ],
+  "kroger": [
+   "kroger.com"
+  ],
+  "lowes": [
+   "lowes.com"
+  ],
+  "mcafee": [
+   "mcafee.com"
+  ],
+  "microsoft": [
+   "microsoft.com"
+  ],
+  "msn": [
+   "msn.com"
+  ],
+  "netflix": [
+   "netflix.com"
+  ],
+  "norton": [
+   "norton.com",
+   "nortonlifelock.com"
+  ],
+  "outlook": [
+   "microsoft.com",
+   "outlook.com"
+  ],
+  "paramount": [
+   "paramount.com"
+  ],
+  "paypal": [
+   "paypal.com"
+  ],
+  "robinhood": [
+   "robinhood.com"
+  ],
+  "sam's club": [
+   "samsclub.com"
+  ],
+  "shein": [
+   "shein.com"
+  ],
+  "sirius": [
+   "sirius.com"
+  ],
+  "social security": [
+   "ssa.gov"
+  ],
+  "spotify": [
+   "spotify.com"
+  ],
+  "ssa": [
+   "ssa.gov"
+  ],
+  "state farm": [
+   "statefarm.com"
+  ],
+  "uphold": [
+   "uphold.com"
+  ],
+  "ups": [
+   "ups.com"
+  ],
+  "usps": [
+   "usps.com"
+  ],
+  "venmo": [
+   "venmo.com"
+  ],
+  "verizon": [
+   "verizon.com"
+  ],
+  "walgreens": [
+   "walgreens.com"
+  ],
+  "walmart": [
+   "walmart.com"
+  ],
+  "wells fargo": [
+   "wellsfargo.com"
+  ],
+  "xfinity": [
+   "comcast.com",
+   "xfinity.com"
+  ],
+  "zelle": [
+   "zellepay.com"
+  ]
+ },
+ "spoof_ignore": [],
+ "delete_non_english": false
+}
