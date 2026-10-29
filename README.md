@@ -26,7 +26,7 @@ A digest of each run can be pushed to your phone with [ntfy](https://ntfy.sh) (o
 ## Install
 
 ```sh
-git clone https://github.com/<you>/outlook-junk-triage.git ~/junk-triage
+git clone https://github.com/pdlmnk/outlook-junk-triage.git ~/junk-triage
 cd ~/junk-triage
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
